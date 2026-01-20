@@ -122,6 +122,14 @@ for(let d=0;d<5;d++){
   <input type="time" id="d${d}v${i}time">
   <input id="d${d}v${i}firma" placeholder="Firma / Cari">
   <textarea id="d${d}v${i}not" placeholder="Not"></textarea>
+  <label>Gidiş Amacı</label>
+  <select id="d${d}v${i}amac">
+    <option value="">Seçiniz</option>
+    <option value="Tanışma">Tanışma</option>
+    <option value="Tekrar Ziyaret">Tekrar Ziyaret</option>
+    <option value="İade">İade</option>
+    <option value="Ürün Tanıtımı">Ürün Tanıtımı</option>
+  </select>
   <label><input type="checkbox" id="d${d}v${i}numune"> Numune</label>
   <label><input type="checkbox" id="d${d}v${i}katalog"> Katalog</label>
   </div>`;
@@ -178,7 +186,14 @@ function loadData(){
 loadData();
 
 function exportPDF(){
- html2pdf().from(document.getElementById('report')).save('haftalik_ziyaret.pdf');
+ // PDF icin tum gunleri gecici olarak goster
+ const days=document.querySelectorAll('.day');
+ const oldDisplay=[];
+ days.forEach((d,i)=>{oldDisplay[i]=d.style.display; d.style.display='block';});
+ html2pdf().set({pagebreak:{mode:'css',before:'.day'}}).from(document.getElementById('report')).save('haftalik_ziyaret.pdf').then(()=>{
+  // eski gorunume geri don
+  days.forEach((d,i)=>d.style.display=oldDisplay[i]);
+ });
 }
 
 function shareWhatsApp(){
