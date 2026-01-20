@@ -18,15 +18,23 @@ body{margin:0;background:var(--bg)}
 .tabs{display:flex;gap:6px;margin-bottom:12px}
 .tab{flex:1;padding:10px;border:none;background:#ddd;font-weight:bold}
 .tab.active{background:var(--accent);color:#fff}
-.card{background:#fff;border-radius:14px;padding:12px;margin-bottom:12px;border-left:6px solid var(--accent)}
-label{font-weight:bold;font-size:14px;display:block;margin-top:8px}
-input,textarea,select{width:100%;padding:10px;border-radius:8px;border:1px solid var(--border)}
-textarea{min-height:60px}
+.card{background:#fff;border-radius:12px;padding:10px;margin-bottom:10px;border-left:5px solid var(--accent)}
+.day{page-break-before:always}
+.day h3{margin:0 0 8px 0;background:#e3f2fd;padding:6px;border-radius:8px}
+.visit-grid{display:grid;grid-template-columns:60px 1fr 120px 80px 80px;gap:6px;font-size:13px}
+.visit-grid div{padding:6px;border-bottom:1px solid #ddd}
+label{font-weight:bold;font-size:13px;display:block;margin-top:6px}
+input,textarea,select{width:100%;padding:8px;border-radius:6px;border:1px solid var(--border)}
+textarea{min-height:50px}
 .actions{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-top:16px}
 button{padding:14px;border:none;border-radius:12px;font-size:15px}
 .save{background:#43a047;color:#fff}
 .pdf{background:#e53935;color:#fff}
 .excel{background:#1b5e20;color:#fff}
+@media print{
+ .tabs,.actions,button{display:none}
+ body{background:#fff}
+}
 </style>
 </head>
 <body>
@@ -58,12 +66,14 @@ button{padding:14px;border:none;border-radius:12px;font-size:15px}
 
 <div id="days"></div>
 
-<div class="card">
-<b>Haftalık Özet</b><br>
-Ziyaret: <span id="haftaZiyaret">0</span> | 
-Numune: <span id="haftaNumune">0</span> | 
-Katalog: <span id="haftaKatalog">0</span> | 
-KM: <span id="haftaKM">0</span>
+<div class="card" style="background:#e3f2fd;border-left:6px solid #0b2a55">
+ <h2 style="margin:0 0 8px 0;text-align:center">HAFTALIK YÖNETİCİ ÖZETİ</h2>
+ <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;text-align:center;font-size:16px">
+  <div><b>Toplam Ziyaret</b><br><span id="haftaZiyaret">0</span></div>
+  <div><b>Toplam Numune</b><br><span id="haftaNumune">0</span></div>
+  <div><b>Toplam Katalog</b><br><span id="haftaKatalog">0</span></div>
+  <div><b>Toplam KM</b><br><span id="haftaKM">0</span></div>
+ </div>
 </div>
 
 <div class="actions">
