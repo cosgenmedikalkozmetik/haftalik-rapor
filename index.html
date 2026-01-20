@@ -169,7 +169,8 @@ function yeniHafta(){
 function saveData(){
  const data={};
  document.querySelectorAll('input,textarea,select').forEach(e=>{
-  data[e.id]=e.type==='checkbox'?e.checked:e.value;
+  if(!e.id) return;
+  data[e.id]= e.type==='checkbox' ? e.checked : e.value;
  });
  localStorage.setItem('haftalikRapor',JSON.stringify(data));
  alert('Kaydedildi');
@@ -179,21 +180,23 @@ function loadData(){
  const data=JSON.parse(localStorage.getItem('haftalikRapor'));
  if(!data) return;
  document.querySelectorAll('input,textarea,select').forEach(e=>{
-  if(e.type==='checkbox') e.checked=data[e.id]||false;
+  if(!e.id) return;
+  if(e.type==='checkbox') e.checked=!!data[e.id];
   else e.value=data[e.id]||'';
  });
 }
 loadData();
 
 function exportPDF(){
- // PDF icin tum gunleri gecici olarak goster
  const days=document.querySelectorAll('.day');
- const oldDisplay=[];
- days.forEach((d,i)=>{oldDisplay[i]=d.style.display; d.style.display='block';});
- html2pdf().set({pagebreak:{mode:'css',before:'.day'}}).from(document.getElementById('report')).save('haftalik_ziyaret.pdf').then(()=>{
-  // eski gorunume geri don
-  days.forEach((d,i)=>d.style.display=oldDisplay[i]);
- });
+ const old=[];
+ days.forEach((d,i)=>{old[i]=d.style.display; d.style.display='block';});
+ setTimeout(()=>{
+  html2pdf().set({html2canvas:{scale:2},pagebreak:{mode:['css','legacy']}})
+   .from(document.getElementById('report'))
+   .save('haftalik_ziyaret.pdf')
+   .then(()=>days.forEach((d,i)=>d.style.display=old[i]));
+ },300);
 }
 
 function shareWhatsApp(){
