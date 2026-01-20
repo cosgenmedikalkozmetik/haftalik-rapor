@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Haftalık Ziyaret Raporu</title>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+<style>
+:root{--primary:#0b2a55;--accent:#1e88e5;--border:#e0e0e0;--bg:#f4f6f8}
+*{box-sizing:border-box;font-family:Arial}
+body{margin:0;background:var(--bg)}
+.header{background:var(--primary);color:#fff;padding:16px;text-align:center}
+.container{max-width:900px;margin:auto;padding:12px}
+.info{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.tabs{display:flex;gap:6px;margin-bottom:12px}
+.tab{flex:1;padding:10px;border:none;background:#ddd;font-weight:bold}
+.tab.active{background:var(--accent);color:#fff}
+.card{background:#fff;border-radius:14px;padding:12px;margin-bottom:12px;border-left:6px solid var(--accent)}
+label{font-weight:bold;font-size:14px;display:block;margin-top:8px}
+input,textarea,select{width:100%;padding:10px;border-radius:8px;border:1px solid var(--border)}
+textarea{min-height:60px}
+.actions{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-top:16px}
+button{padding:14px;border:none;border-radius:12px;font-size:15px}
+.save{background:#43a047;color:#fff}
+.pdf{background:#e53935;color:#fff}
+.excel{background:#1b5e20;color:#fff}
+</style>
+</head>
+<body>
+
+<div class="header">HAFTALIK ZİYARET RAPORU</div>
+
+<div class="container" id="report">
+<div class="info">
+<select id="personelSelect"></select>
+<div style="display:flex;gap:6px">
+  <input id="yeniPersonel" placeholder="Yeni Personel Adı">
+  <button type="button" onclick="personelEkle()">Ekle</button>
+  <button type="button" onclick="personelSil()">Sil</button>
+</div>
+<input id="bolge" placeholder="Bölge / Şehir">
+<input id="tarih" placeholder="Tarih Aralığı">
+<input id="plaka" placeholder="Araç Plaka">
+<input id="kmBaslangic" type="number" placeholder="Başlangıç KM">
+<input id="kmBitis" type="number" placeholder="Bitiş KM">
+</div>
+
+<div class="tabs">
+<button class="tab active" onclick="openDay(0)">PZT</button>
+<button class="tab" onclick="openDay(1)">SAL</button>
+<button class="tab" onclick="openDay(2)">ÇRŞ</button>
+<button class="tab" onclick="openDay(3)">PRŞ</button>
+<button class="tab" onclick="openDay(4)">CUMA</button>
+</div>
+
+<div id="days"></div>
+
+<div class="card">
+<b>Haftalık Özet</b><br>
+Ziyaret: <span id="haftaZiyaret">0</span> | 
+Numune: <span id="haftaNumune">0</span> | 
+Katalog: <span id="haftaKatalog">0</span> | 
+KM: <span id="haftaKM">0</span>
+</div>
+
+<div class="actions">
+<button style="background:#455a64;color:#fff" onclick="haftaKapat()">Haftayı Kapat</button>
+<button style="background:#ff9800;color:#fff" onclick="yeniHafta()">Yeni Hafta Başlat</button>
+<button class="save" onclick="saveData()">Kaydet</button>
+<button class="pdf" onclick="exportPDF()">PDF</button>
+<button class="excel" onclick="exportExcel()">Excel</button>
+<button style="background:#25D366;color:#fff" onclick="shareWhatsApp()">WhatsApp PDF</button>
+</div>
+</div>
+
+<script>
+// PERSONEL YÖNETİMİ
+const varsayilanPersoneller=['Hasret Gökot','Ömür Kaplan','Gamze Kaç','Işıl Engin'];
+let personelListe=JSON.parse(localStorage.getItem('personelListe'))||varsayilanPersoneller;
+localStorage.setItem('personelListe',JSON.stringify(personelListe));
+
+const personelSelect=document.getElementById('personelSelect');
+const yeniPersonel=document.getElementById('yeniPersonel');
+
+function renderPersonel(){
+ personelSelect.innerHTML=personelListe.map(p=>`<option value="${p}">${p}</option>`).join('');
+}
+
+function personelEkle(){
+ const ad=yeniPersonel.value.trim();
+ if(!ad) return alert('İsim giriniz');
+ if(personelListe.includes(ad)) return alert('Bu isim zaten var');
+ personelListe.push(ad);
+ localStorage.setItem('personelListe',JSON.stringify(personelListe));
+ renderPersonel();
+ yeniPersonel.value='';
+}
+
+function personelSil(){
+ const ad=personelSelect.value;
+ if(!ad) return;
+ if(!confirm(ad+' silinsin mi?')) return;
+ personelListe=personelListe.filter(p=>p!==ad);
+ localStorage.setItem('personelListe',JSON.stringify(personelListe));
+ renderPersonel();
+}
+
+renderPersonel();
+
+
+const daysDiv=document.getElementById('days');
+const visitCount=15;
+
+for(let d=0;d<5;d++){
+ let html=`<div class="day" style="display:${d===0?'block':'none'}">`;
+ for(let i=1;i<=visitCount;i++){
+  html+=`<div class="card">
+  <b>${i}. Ziyaret</b>
+  <input type="time" id="d${d}v${i}time">
+  <input id="d${d}v${i}firma" placeholder="Firma / Cari">
+  <textarea id="d${d}v${i}not" placeholder="Not"></textarea>
+  <label><input type="checkbox" id="d${d}v${i}numune"> Numune</label>
+  <label><input type="checkbox" id="d${d}v${i}katalog"> Katalog</label>
+  </div>`;
+ }
+ html+='</div>';
+ daysDiv.innerHTML+=html;
+}
+
+function openDay(i){
+ document.querySelectorAll('.tab').forEach((t,idx)=>t.classList.toggle('active',idx===i));
+ document.querySelectorAll('.day').forEach((d,idx)=>d.style.display=idx===i?'block':'none');
+}
+
+// === HAFTA YÖNETİMİ ===
+function haftaKapat(){
+ if(!confirm('Hafta kapatılacak. Artık düzenleme yapılamaz. Emin misiniz?')) return;
+ localStorage.setItem('haftaKilit','true');
+ document.querySelectorAll('input,textarea,select,button').forEach(e=>{
+  if(!e.innerText?.includes('PDF') && !e.innerText?.includes('WhatsApp') && !e.innerText?.includes('Yeni Hafta')){
+   e.disabled=true;
+  }
+ });
+ alert('Hafta kapatıldı.');
+}
+
+function yeniHafta(){
+ if(!confirm('Yeni hafta başlatılacak. Eski veriler temizlenecek. Emin misiniz?')) return;
+ localStorage.removeItem('haftalikRapor');
+ localStorage.removeItem('haftaKilit');
+ document.querySelectorAll('input,textarea,select').forEach(e=>{
+  if(e.type==='checkbox') e.checked=false;
+  else e.value='';
+ });
+ alert('Yeni hafta başlatıldı.');
+}
+
+function saveData(){
+ const data={};
+ document.querySelectorAll('input,textarea,select').forEach(e=>{
+  data[e.id]=e.type==='checkbox'?e.checked:e.value;
+ });
+ localStorage.setItem('haftalikRapor',JSON.stringify(data));
+ alert('Kaydedildi');
+}
+
+function loadData(){
+ const data=JSON.parse(localStorage.getItem('haftalikRapor'));
+ if(!data) return;
+ document.querySelectorAll('input,textarea,select').forEach(e=>{
+  if(e.type==='checkbox') e.checked=data[e.id]||false;
+  else e.value=data[e.id]||'';
+ });
+}
+loadData();
+
+function exportPDF(){
+ html2pdf().from(document.getElementById('report')).save('haftalik_ziyaret.pdf');
+}
+
+function shareWhatsApp(){
+ html2pdf().from(document.getElementById('report')).save('haftalik_ziyaret.pdf');
+}
+
+function exportExcel(){
+ const rows=[];
+ document.querySelectorAll('input,textarea').forEach(e=>rows.push({Alan:e.id,Deger:e.value}));
+ const ws=XLSX.utils.json_to_sheet(rows);
+ const wb=XLSX.utils.book_new();
+ XLSX.utils.book_append_sheet(wb,ws,'Rapor');
+ XLSX.writeFile(wb,'haftalik.xlsx');
+}
+
+setInterval(()=>{
+ let z=0,n=0,k=0;
+ document.querySelectorAll('input[id$="firma"]').forEach(i=>i.value&&z++);
+ document.querySelectorAll('input[id$="numune"]').forEach(i=>i.checked&&n++);
+ document.querySelectorAll('input[id$="katalog"]').forEach(i=>i.checked&&k++);
+ haftaZiyaret.innerText=z;haftaNumune.innerText=n;haftaKatalog.innerText=k;
+ const b=Number(kmBaslangic.value||0),s=Number(kmBitis.value||0);
+ haftaKM.innerText=s>b?s-b:0;
+},800);
+</script>
+</body>
+</html>
