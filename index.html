@@ -87,61 +87,40 @@ button{padding:14px;border:none;border-radius:12px;font-size:15px}
 </div>
 
 <script>
-// PERSONEL YÖNETİMİ
+/************** TEMEL DURUM **************/
+const STORAGE_KEY='haftalikRapor_v2';
+
+/************** PERSONEL **************/
 const varsayilanPersoneller=['Hasret Gökot','Ömür Kaplan','Gamze Kaç','Işıl Engin'];
 let personelListe=JSON.parse(localStorage.getItem('personelListe'))||varsayilanPersoneller;
 localStorage.setItem('personelListe',JSON.stringify(personelListe));
-
 const personelSelect=document.getElementById('personelSelect');
 const yeniPersonel=document.getElementById('yeniPersonel');
-
-function renderPersonel(){
- personelSelect.innerHTML=personelListe.map(p=>`<option value="${p}">${p}</option>`).join('');
-}
-
-function personelEkle(){
- const ad=yeniPersonel.value.trim();
- if(!ad) return alert('İsim giriniz');
- if(personelListe.includes(ad)) return alert('Bu isim zaten var');
- personelListe.push(ad);
- localStorage.setItem('personelListe',JSON.stringify(personelListe));
- renderPersonel();
- yeniPersonel.value='';
-}
-
-function personelSil(){
- const ad=personelSelect.value;
- if(!ad) return;
- if(!confirm(ad+' silinsin mi?')) return;
- personelListe=personelListe.filter(p=>p!==ad);
- localStorage.setItem('personelListe',JSON.stringify(personelListe));
- renderPersonel();
-}
-
+function renderPersonel(){personelSelect.innerHTML=personelListe.map(p=>`<option>${p}</option>`).join('');}
 renderPersonel();
+function personelEkle(){const a=yeniPersonel.value.trim();if(!a)return;personelListe.push(a);localStorage.setItem('personelListe',JSON.stringify(personelListe));renderPersonel();yeniPersonel.value='';}
+function personelSil(){const a=personelSelect.value;if(!a)return;personelListe=personelListe.filter(p=>p!==a);localStorage.setItem('personelListe',JSON.stringify(personelListe));renderPersonel();}
 
-
+/************** GUNLER & ZIYARETLER **************/
 const daysDiv=document.getElementById('days');
+const gunAdlari=['Pazartesi','Salı','Çarşamba','Perşembe','Cuma'];
 const visitCount=15;
-
 for(let d=0;d<5;d++){
- let html=`<div class="day" style="display:${d===0?'block':'none'}">`;
+ let html=`<div class="day" data-day="${d}" style="display:${d===0?'block':'none'}"><h3>${gunAdlari[d]}</h3>`;
  for(let i=1;i<=visitCount;i++){
   html+=`<div class="card">
-  <b>${i}. Ziyaret</b>
-  <input type="time" id="d${d}v${i}time">
-  <input id="d${d}v${i}firma" placeholder="Firma / Cari">
-  <textarea id="d${d}v${i}not" placeholder="Not"></textarea>
-  <label>Gidiş Amacı</label>
-  <select id="d${d}v${i}amac">
-    <option value="">Seçiniz</option>
-    <option value="Tanışma">Tanışma</option>
-    <option value="Tekrar Ziyaret">Tekrar Ziyaret</option>
-    <option value="İade">İade</option>
-    <option value="Ürün Tanıtımı">Ürün Tanıtımı</option>
-  </select>
-  <label><input type="checkbox" id="d${d}v${i}numune"> Numune</label>
-  <label><input type="checkbox" id="d${d}v${i}katalog"> Katalog</label>
+   <b>${i}. Ziyaret</b>
+   <input type="time" data-k="d${d}v${i}_time">
+   <input placeholder="Firma / Cari" data-k="d${d}v${i}_firma">
+   <select data-k="d${d}v${i}_amac">
+    <option value="">Amaç</option>
+    <option>Tanışma</option>
+    <option>Tekrar Ziyaret</option>
+    <option>İade</option>
+    <option>Ürün Tanıtımı</option>
+   </select>
+   <label><input type="checkbox" data-k="d${d}v${i}_numune"> Numune</label>
+   <label><input type="checkbox" data-k="d${d}v${i}_katalog"> Katalog</label>
   </div>`;
  }
  html+='</div>';
@@ -153,84 +132,65 @@ function openDay(i){
  document.querySelectorAll('.day').forEach((d,idx)=>d.style.display=idx===i?'block':'none');
 }
 
-// === HAFTA YÖNETİMİ ===
-function haftaKapat(){
- if(!confirm('Hafta kapatılacak. Artık düzenleme yapılamaz. Emin misiniz?')) return;
- localStorage.setItem('haftaKilit','true');
- document.querySelectorAll('input,textarea,select,button').forEach(e=>{
-  if(!e.innerText?.includes('PDF') && !e.innerText?.includes('WhatsApp') && !e.innerText?.includes('Yeni Hafta')){
-   e.disabled=true;
-  }
- });
- alert('Hafta kapatıldı.');
-}
-
-function yeniHafta(){
- if(!confirm('Yeni hafta başlatılacak. Eski veriler temizlenecek. Emin misiniz?')) return;
- localStorage.removeItem('haftalikRapor');
- localStorage.removeItem('haftaKilit');
- document.querySelectorAll('input,textarea,select').forEach(e=>{
-  if(e.type==='checkbox') e.checked=false;
-  else e.value='';
- });
- alert('Yeni hafta başlatıldı.');
-}
-
+/************** KAYDET / YUKLE **************/
 function saveData(){
- const data={};
- document.querySelectorAll('input,textarea,select').forEach(e=>{
-  if(!e.id) return;
-  data[e.id]= e.type==='checkbox' ? e.checked : e.value;
+ const data={meta:{personel:personelSelect.value,bolge:bolge.value,tarih:tarih.value,plaka:plaka.value,kmBas:kmBaslangic.value,kmBit:kmBitis.value},ziyaretler:{}};
+ document.querySelectorAll('[data-k]').forEach(e=>{
+  data.ziyaretler[e.dataset.k]= e.type==='checkbox'?e.checked:e.value;
  });
- localStorage.setItem('haftalikRapor',JSON.stringify(data));
+ localStorage.setItem(STORAGE_KEY,JSON.stringify(data));
  alert('Kaydedildi');
 }
 
 function loadData(){
- const data=JSON.parse(localStorage.getItem('haftalikRapor'));
+ const data=JSON.parse(localStorage.getItem(STORAGE_KEY));
  if(!data) return;
- document.querySelectorAll('input,textarea,select').forEach(e=>{
-  if(!e.id) return;
-  if(e.type==='checkbox') e.checked=!!data[e.id];
-  else e.value=data[e.id]||'';
+ bolge.value=data.meta.bolge||'';tarih.value=data.meta.tarih||'';plaka.value=data.meta.plaka||'';
+ kmBaslangic.value=data.meta.kmBas||'';kmBitis.value=data.meta.kmBit||'';
+ document.querySelectorAll('[data-k]').forEach(e=>{
+  const v=data.ziyaretler[e.dataset.k];
+  if(e.type==='checkbox') e.checked=!!v; else e.value=v||'';
  });
 }
 loadData();
 
+/************** YONETICI PDF **************/
 function exportPDF(){
- const days=document.querySelectorAll('.day');
- const old=[];
- days.forEach((d,i)=>{old[i]=d.style.display; d.style.display='block';});
- setTimeout(()=>{
-  html2pdf().set({html2canvas:{scale:2},pagebreak:{mode:['css','legacy']}})
-   .from(document.getElementById('report'))
-   .save('haftalik_ziyaret.pdf')
-   .then(()=>days.forEach((d,i)=>d.style.display=old[i]));
- },300);
-}
+ const wrapper=document.createElement('div');
+ const data=JSON.parse(localStorage.getItem(STORAGE_KEY));
+ if(!data){alert('Kayit yok');return;}
 
-function shareWhatsApp(){
- html2pdf().from(document.getElementById('report')).save('haftalik_ziyaret.pdf');
-}
-
-function exportExcel(){
- const rows=[];
- document.querySelectorAll('input,textarea').forEach(e=>rows.push({Alan:e.id,Deger:e.value}));
- const ws=XLSX.utils.json_to_sheet(rows);
- const wb=XLSX.utils.book_new();
- XLSX.utils.book_append_sheet(wb,ws,'Rapor');
- XLSX.writeFile(wb,'haftalik.xlsx');
-}
-
-setInterval(()=>{
  let z=0,n=0,k=0;
- document.querySelectorAll('input[id$="firma"]').forEach(i=>i.value&&z++);
- document.querySelectorAll('input[id$="numune"]').forEach(i=>i.checked&&n++);
- document.querySelectorAll('input[id$="katalog"]').forEach(i=>i.checked&&k++);
- haftaZiyaret.innerText=z;haftaNumune.innerText=n;haftaKatalog.innerText=k;
- const b=Number(kmBaslangic.value||0),s=Number(kmBitis.value||0);
- haftaKM.innerText=s>b?s-b:0;
-},800);
+ Object.keys(data.ziyaretler).forEach(x=>{
+  if(x.endsWith('firma') && data.ziyaretler[x]) z++;
+  if(x.endsWith('numune') && data.ziyaretler[x]) n++;
+  if(x.endsWith('katalog') && data.ziyaretler[x]) k++;
+ });
+ const km=(Number(data.meta.kmBit)-Number(data.meta.kmBas))||0;
+
+ wrapper.innerHTML=`<h1>HAFTALIK YÖNETİCİ RAPORU</h1>
+ <p><b>Personel:</b> ${data.meta.personel} | <b>Bölge:</b> ${data.meta.bolge}</p>
+ <table border="1" cellspacing="0" cellpadding="6" width="100%">
+ <tr><th>Toplam Ziyaret</th><th>Numune</th><th>Katalog</th><th>KM</th></tr>
+ <tr><td>${z}</td><td>${n}</td><td>${k}</td><td>${km}</td></tr>
+ </table><br>`;
+
+ gunAdlari.forEach((g,di)=>{
+  let rows='';((g,di)=>{
+  let rows='';
+  for(let i=1;i<=visitCount;i++){
+   const f=data.ziyaretler[`d${di}v${i}_firma`];
+   if(!f) continue;
+   rows+=`<tr><td>${data.ziyaretler[`d${di}v${i}_time`]||''}</td><td>${f}</td><td>${data.ziyaretler[`d${di}v${i}_amac`]||''}</td><td>${data.ziyaretler[`d${di}v${i}_numune`]?'✔':''}</td><td>${data.ziyaretler[`d${di}v${i}_katalog`]?'✔':''}</td></tr>`;
+  }
+  if(rows){
+   wrapper.innerHTML+=`<h2>${g}</h2><table border="1" cellspacing="0" cellpadding="6" width="100%"><tr><th>Saat</th><th>Firma</th><th>Amaç</th><th>Numune</th><th>Katalog</th></tr>${rows}</table><br>`;
+  }
+ });
+
+ html2pdf().from(wrapper).save('yonetici_raporu.pdf');
+}
 </script>
 </body>
 </html>
+
