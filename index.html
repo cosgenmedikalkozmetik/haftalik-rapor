@@ -27,6 +27,14 @@ button{padding:14px;border:none;border-radius:14px;font-size:15px;color:#fff}
 .summary{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;text-align:center}
 .summary div{background:#e3f2fd;padding:10px;border-radius:10px}
 @media(max-width:600px){.summary{grid-template-columns:1fr 1fr}}
+
+/* PDF PRINT STYLES */
+@media print{
+ body{background:#fff}
+ header,.actions,.tabs{display:none}
+ .container{max-width:none;padding:0}
+ .card{page-break-after:always;border-radius:0}
+}
 </style>
 </head>
 <body>
@@ -129,63 +137,8 @@ function calcSummary(d){
 }
 
 function exportPDF(){
- const d=JSON.parse(localStorage.getItem(KEY));
- if(!d){alert('Kayıt yok');return;}
-
- let pages='';
- gunler.forEach((g,di)=>{
-  let rows='';
-  for(let i=1;i<=ziyaretAdet;i++){
-   const f=d.v[`d${di}v${i}_firma`];
-   if(!f) continue;
-   rows+=`<tr>
-     <td>${d.v[`d${di}v${i}_time`]||''}</td>
-     <td>${f}</td>
-     <td>${d.v[`d${di}v${i}_amac`]||''}</td>
-     <td style="text-align:center">${d.v[`d${di}v${i}_numune`]?'✔':''}</td>
-     <td style="text-align:center">${d.v[`d${di}v${i}_katalog`]?'✔':''}</td>
-   </tr>`;
-  }
-  if(rows){
-   pages+=`<div class="pdfPage">
-    <h2>${g}</h2>
-    <div class="meta">${d.meta.personel} | ${d.meta.bolge} | ${d.meta.tarih} | Plaka: ${d.meta.plaka}</div>
-    <table>
-     <thead><tr><th>Saat</th><th>Firma</th><th>Amaç</th><th>Numune</th><th>Katalog</th></tr></thead>
-     <tbody>${rows}</tbody>
-    </table>
-   </div>`;
-  }
- });
-
- if(!pages){alert('PDF için dolu ziyaret yok');return;}
-
- // PDF alanını GERÇEKTEN ekrana ekle (kritik)
- const pdfRoot=document.createElement('div');
- pdfRoot.id='pdfRoot';
- pdfRoot.innerHTML=`<style>
-  #pdfRoot{background:#fff;color:#000;width:210mm;padding:12mm}
-  .pdfPage{page-break-after:always;font-family:Arial}
-  .pdfPage h2{text-align:center;margin:0 0 6px 0}
-  .meta{text-align:center;font-size:12px;margin-bottom:8px}
-  table{width:100%;border-collapse:collapse;font-size:11px}
-  th,td{border:1px solid #000;padding:4px}
- </style>${pages}`;
-
- document.body.appendChild(pdfRoot);
-
- // Render garanti bekleme
- setTimeout(()=>{
-  html2pdf()
-   .set({
-     filename:'haftalik_ziyaret_raporu.pdf',
-     jsPDF:{format:'a4',orientation:'portrait'},
-     html2canvas:{scale:2}
-   })
-   .from(pdfRoot)
-   .save()
-   .then(()=>document.body.removeChild(pdfRoot));
- },500);
+ saveData();
+ window.print();
 }
 
 function newWeek(){ if(confirm('Tüm veriler silinecek. Emin misiniz?')){localStorage.removeItem(KEY);location.reload();} }
