@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Haftalık Saha Ziyaret Raporu</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <style>
 :root{--m:#0b2a55;--a:#1e88e5;--b:#ddd;--bg:#f4f6f8}
 *{box-sizing:border-box;font-family:Arial}
@@ -19,7 +18,6 @@ input,select{width:100%;padding:8px;border-radius:8px;border:1px solid var(--b)}
 .tabs button.active{background:var(--a);color:#fff}
 .visit{border:1px solid var(--b);border-radius:10px;padding:10px;margin-bottom:8px}
 .visit b{display:block;margin-bottom:6px}
-.visit.empty{display:none}
 .actions{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px}
 button{padding:14px;border:none;border-radius:14px;font-size:15px;color:#fff}
 .save{background:#43a047}
@@ -28,9 +26,8 @@ button{padding:14px;border:none;border-radius:14px;font-size:15px;color:#fff}
 .summary{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;text-align:center}
 .summary div{background:#e3f2fd;padding:10px;border-radius:10px}
 @media(max-width:600px){.summary{grid-template-columns:1fr 1fr}}
-
-/* PDF / PRINT */
 @media print{
+ .visit:has(input[placeholder="Firma / Cari"]:placeholder-shown){display:none}
  body{background:#fff}
  header,.actions,.tabs{display:none}
  .container{max-width:none;padding:0}
@@ -41,12 +38,12 @@ button{padding:14px;border:none;border-radius:14px;font-size:15px;color:#fff}
 </head>
 <body>
 <header>HAFTALIK SAHA ZİYARET RAPORU</header>
-<div class="container" id="app">
+<div class="container">
 
 <div class="card info">
 <select id="personel"></select>
 <input id="bolge" placeholder="Bölge / Şehir">
-<input id="tarih" placeholder="Hafta (01-05 Oca 2026)">
+<input id="tarih" placeholder="Hafta">
 <input id="plaka" placeholder="Araç Plaka">
 <input id="kmBas" type="number" placeholder="Başlangıç KM">
 <input id="kmBit" type="number" placeholder="Bitiş KM">
@@ -79,29 +76,39 @@ const gunler=['Pazartesi','Salı','Çarşamba','Perşembe','Cuma'];
 const ziyaretAdet=15;
 
 const pSel=document.getElementById('personel');
-pSel.innerHTML=personeller.map(p=>`<option>${p}</option>`).join('');
+const bolge=document.getElementById('bolge');
+const tarih=document.getElementById('tarih');
+const plaka=document.getElementById('plaka');
+const kmBas=document.getElementById('kmBas');
+const kmBit=document.getElementById('kmBit');
+const ozZ=document.getElementById('ozZ');
+const ozN=document.getElementById('ozN');
+const ozK=document.getElementById('ozK');
+const ozKM=document.getElementById('ozKM');
+
+pSel.innerHTML=personeller.map(p=>'<option>'+p+'</option>').join('');
 
 const tabs=document.getElementById('tabs');
 const days=document.getElementById('days');
 
-gunler.forEach((g,di)=>{
- tabs.innerHTML+=`<button onclick="openDay(${di})" ${di===0?'class=active':''}>${g.substring(0,3).toUpperCase()}</button>`;
- let h=`<div class="day" style="display:${di===0?'block':'none'}"><div class="card"><h3>${g}</h3>`;
+gunler.forEach(function(g,di){
+ tabs.innerHTML+='<button onclick="openDay('+di+')" '+(di===0?'class="active"':'')+'>'+g.substring(0,3).toUpperCase()+'</button>';
+ let h='<div class="day" style="display:'+(di===0?'block':'none')+'"><div class="card"><h3>'+g+'</h3>';
  for(let i=1;i<=ziyaretAdet;i++){
-  h+=`<div class="visit">
-   <b>${i}. Ziyaret</b>
-   <input type="time" data-k="d${di}v${i}_time">
-   <input placeholder="Firma / Cari" data-k="d${di}v${i}_firma">
-   <select data-k="d${di}v${i}_amac">
-    <option value="">Amaç</option>
-    <option>Tanışma</option>
-    <option>Tekrar Ziyaret</option>
-    <option>İade</option>
-    <option>Ürün Tanıtımı</option>
-   </select>
-   <label><input type="checkbox" data-k="d${di}v${i}_numune"> Numune</label>
-   <label><input type="checkbox" data-k="d${di}v${i}_katalog"> Katalog</label>
-  </div>`;
+  h+='<div class="visit">'+
+     '<b>'+i+'. Ziyaret</b>'+
+     '<input type="time" data-k="d'+di+'v'+i+'_time">'+
+     '<input placeholder="Firma / Cari" data-k="d'+di+'v'+i+'_firma">'+
+     '<select data-k="d'+di+'v'+i+'_amac">'+
+      '<option value="">Amaç</option>'+
+      '<option>Tanışma</option>'+
+      '<option>Tekrar Ziyaret</option>'+
+      '<option>İade</option>'+
+      '<option>Ürün Tanıtımı</option>'+
+     '</select>'+
+     '<label><input type="checkbox" data-k="d'+di+'v'+i+'_numune"> Numune</label>'+
+     '<label><input type="checkbox" data-k="d'+di+'v'+i+'_katalog"> Katalog</label>'+
+     '</div>';
  }
  h+='</div></div>';
  days.innerHTML+=h;
@@ -116,50 +123,24 @@ function saveData(){
  const data={meta:{personel:pSel.value,bolge:bolge.value,tarih:tarih.value,plaka:plaka.value,kmBas:kmBas.value,kmBit:kmBit.value},v:{}};
  document.querySelectorAll('[data-k]').forEach(e=>data.v[e.dataset.k]=e.type==='checkbox'?e.checked:e.value);
  localStorage.setItem(KEY,JSON.stringify(data));
- markEmptyVisits();
  calcSummary(data);
 }
 
 function loadData(){
  const d=JSON.parse(localStorage.getItem(KEY)); if(!d) return;
  Object.keys(d.meta).forEach(k=>document.getElementById(k).value=d.meta[k]);
- document.querySelectorAll('[data-k]').forEach(e=>{
-  if(d.v[e.dataset.k]!=null){e.type==='checkbox'?e.checked=d.v[e.dataset.k]:e.value=d.v[e.dataset.k];}
- });
- markEmptyVisits();
+ document.querySelectorAll('[data-k]').forEach(e=>{if(d.v[e.dataset.k]!=null){e.type==='checkbox'?e.checked=d.v[e.dataset.k]:e.value=d.v[e.dataset.k];}});
  calcSummary(d);
 }
 
 function calcSummary(d){
  let z=0,n=0,k=0;
- Object.keys(d.v).forEach(x=>{
-  if(x.endsWith('firma')&&d.v[x]) z++;
-  if(x.endsWith('numune')&&d.v[x]) n++;
-  if(x.endsWith('katalog')&&d.v[x]) k++;
- });
- ozZ.innerText=z; ozN.innerText=n; ozK.innerText=k;
- ozKM.innerText=(d.meta.kmBit-d.meta.kmBas)||0;
+ Object.keys(d.v).forEach(x=>{if(x.endsWith('firma')&&d.v[x])z++;if(x.endsWith('numune')&&d.v[x])n++;if(x.endsWith('katalog')&&d.v[x])k++;});
+ ozZ.innerText=z;ozN.innerText=n;ozK.innerText=k;ozKM.innerText=(d.meta.kmBit-d.meta.kmBas)||0;
 }
 
-function exportPDF(){
- saveData();
- window.print();
-}
-
-function newWeek(){
- if(confirm('Tüm veriler silinecek. Emin misiniz?')){
-  localStorage.removeItem(KEY);
-  location.reload();
- }
-}
-
-function markEmptyVisits(){
- document.querySelectorAll('.visit').forEach(v=>{
-  const firma=v.querySelector('input[placeholder="Firma / Cari"]');
-  if(!firma || !firma.value.trim()) v.classList.add('empty');
-  else v.classList.remove('empty');
- });
-}
+function exportPDF(){saveData();window.print();}
+function newWeek(){if(confirm('Tüm veriler silinecek. Emin misiniz?')){localStorage.removeItem(KEY);location.reload();}}
 
 loadData();
 </script>
