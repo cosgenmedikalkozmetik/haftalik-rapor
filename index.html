@@ -127,7 +127,44 @@ function calcSummary(d){
  pO.innerText=d.meta.personel; bO.innerText=d.meta.bolge; tO.innerText=d.meta.tarih; plO.innerText=d.meta.plaka;
 }
 
-function exportPDF(){ saveData(); window.print(); }
+function exportPDF(){
+ saveData();
+ const data=JSON.parse(localStorage.getItem(KEY));
+ if(!data) return;
+ // RAPOR ALANI
+ let html=`<div id="pdfReport" style="font-family:Arial;padding:10px">`;
+ // SAYFA 1 OZET
+ html+=`<h2 style="text-align:center">HAFTALIK YÖNETİCİ ÖZETİ</h2>`;
+ html+=`<table style="width:100%;border-collapse:collapse;font-size:12px">`;
+ html+=`<tr><td><b>Personel</b></td><td>${data.meta.personel||''}</td><td><b>Bölge</b></td><td>${data.meta.bolge||''}</td></tr>`;
+ html+=`<tr><td><b>Hafta</b></td><td>${data.meta.tarih||''}</td><td><b>Araç</b></td><td>${data.meta.plaka||''}</td></tr>`;
+ html+=`<tr><td><b>Toplam Ziyaret</b></td><td>${ozZ.innerText}</td><td><b>KM</b></td><td>${ozKM.innerText}</td></tr>`;
+ html+=`</table><div style="page-break-after:always"></div>`;
+ // SAYFA 2+ TABLO
+ html+=`<h2 style="text-align:center">HAFTALIK ZİYARET DETAYI</h2>`;
+ html+=`<table border="1" style="width:100%;border-collapse:collapse;font-size:11px">`;
+ html+=`<tr><th>Gün</th><th>Saat</th><th>Firma</th><th>Amaç</th><th>Numune</th><th>Katalog</th></tr>`;
+ gunler.forEach((g,di)=>{
+  for(let i=1;i<=ziyaretAdet;i++){
+   const f=data.v[`d${di}v${i}_firma`];
+   if(!f) continue;
+   html+=`<tr>`+
+   `<td>${g}</td>`+
+   `<td>${data.v[`d${di}v${i}_time`]||''}</td>`+
+   `<td>${f}</td>`+
+   `<td>${data.v[`d${di}v${i}_amac`]||''}</td>`+
+   `<td>${data.v[`d${di}v${i}_numune`]?'✔':''}</td>`+
+   `<td>${data.v[`d${di}v${i}_katalog`]?'✔':''}</td>`+
+   `</tr>`;
+  }
+ });
+ html+=`</table></div>`;
+ const w=window.open('','','width=900,height=700');
+ w.document.write(`<html><head><title>Rapor</title></head><body>${html}</body></html>`);
+ w.document.close();
+ w.focus();
+ w.print();
+}
 function newWeek(){ if(confirm('Silinsin mi?')){localStorage.removeItem(KEY);location.reload();} }
 
 (function load(){ const d=JSON.parse(localStorage.getItem(KEY)); if(!d) return;
@@ -138,4 +175,3 @@ function newWeek(){ if(confirm('Silinsin mi?')){localStorage.removeItem(KEY);loc
 </script>
 </body>
 </html>
-
