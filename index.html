@@ -131,18 +131,35 @@ function calcSummary(d){
 function exportPDF(){
  const d=JSON.parse(localStorage.getItem(KEY)); if(!d){alert('Kayıt yok');return;}
  calcSummary(d);
- let h=`<h1>HAFTALIK ZİYARET RAPORU</h1><p><b>${d.meta.personel}</b> | ${d.meta.bolge} | ${d.meta.tarih}</p>`;
- h+=`<table border=1 width=100% cellpadding=6><tr><th>Ziyaret</th><th>Numune</th><th>Katalog</th><th>KM</th></tr><tr><td>${ozZ.innerText}</td><td>${ozN.innerText}</td><td>${ozK.innerText}</td><td>${ozKM.innerText}</td></tr></table><br>`;
+ let pages='';
  gunler.forEach((g,di)=>{
-  let r='';
+  let rows='';
   for(let i=1;i<=ziyaretAdet;i++){
    const f=d.v[`d${di}v${i}_firma`]; if(!f) continue;
-   r+=`<tr><td>${d.v[`d${di}v${i}_time`]||''}</td><td>${f}</td><td>${d.v[`d${di}v${i}_amac`]||''}</td><td>${d.v[`d${di}v${i}_numune`]?'✔':''}</td><td>${d.v[`d${di}v${i}_katalog`]?'✔':''}</td></tr>`;
+   rows+=`<tr><td>${d.v[`d${di}v${i}_time`]||''}</td><td>${f}</td><td>${d.v[`d${di}v${i}_amac`]||''}</td><td>${d.v[`d${di}v${i}_numune`]?'✔':''}</td><td>${d.v[`d${di}v${i}_katalog`]?'✔':''}</td></tr>`;
   }
-  if(r) h+=`<h3>${g}</h3><table border=1 width=100% cellpadding=6><tr><th>Saat</th><th>Firma</th><th>Amaç</th><th>Numune</th><th>Katalog</th></tr>${r}</table><br>`;
+  if(rows){
+   pages+=`<div style="page-break-after:always">
+   <h2 style="text-align:center">${g}</h2>
+   <p><b>${d.meta.personel}</b> | ${d.meta.bolge} | ${d.meta.tarih} | Plaka: ${d.meta.plaka}</p>
+   <table border="1" width="100%" cellpadding="6" style="border-collapse:collapse">
+   <tr><th>Saat</th><th>Firma</th><th>Amaç</th><th>Numune</th><th>Katalog</th></tr>
+   ${rows}
+   </table>
+   </div>`;
+  }
  });
- const w=document.createElement('div'); w.innerHTML=h;
- html2pdf().from(w).set({filename:'haftalik_ziyaret_raporu.pdf',html2canvas:{scale:2}}).save();
+ if(!pages){alert('Dolu ziyaret yok');return;}
+ const w=document.createElement('div');
+ w.style.position='fixed'; w.style.left='-9999px';
+ w.innerHTML=pages;
+ document.body.appendChild(w);
+ html2pdf().set({
+  margin:10,
+  filename:'haftalik_ziyaret_raporu.pdf',
+  jsPDF:{format:'a4',orientation:'portrait'},
+  html2canvas:{scale:2}
+ }).from(w).save().then(()=>document.body.removeChild(w));
 }
 
 function newWeek(){ if(confirm('Tüm veriler silinecek. Emin misiniz?')){localStorage.removeItem(KEY);location.reload();} }
@@ -151,4 +168,3 @@ loadData();
 </script>
 </body>
 </html>
-
