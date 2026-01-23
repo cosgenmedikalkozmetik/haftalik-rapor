@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Haftalık Saha Ziyaret Raporu</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <style>
 :root{--m:#0b2a55;--a:#1e88e5;--b:#ddd;--bg:#f4f6f8}
 *{box-sizing:border-box;font-family:Arial}
@@ -26,19 +27,22 @@ button{padding:14px;border:none;border-radius:14px;font-size:15px;color:#fff}
 .summary{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;text-align:center}
 .summary div{background:#e3f2fd;padding:10px;border-radius:10px}
 @media(max-width:600px){.summary{grid-template-columns:1fr 1fr}}
+
+/* PDF */
 @media print{
- .visit:has(input[placeholder="Firma / Cari"]:placeholder-shown){display:none}
  body{background:#fff}
  header,.actions,.tabs{display:none}
  .container{max-width:none;padding:0}
  .card{border-radius:0}
- .day{page-break-after:always}
+ .page{page-break-after:always}
+ table{width:100%;border-collapse:collapse;font-size:11px}
+ th,td{border:1px solid #000;padding:4px;text-align:left}
 }
 </style>
 </head>
 <body>
 <header>HAFTALIK SAHA ZİYARET RAPORU</header>
-<div class="container">
+<div class="container" id="app">
 
 <div class="card info">
 <select id="personel"></select>
@@ -52,14 +56,15 @@ button{padding:14px;border:none;border-radius:14px;font-size:15px;color:#fff}
 <div class="tabs" id="tabs"></div>
 <div id="days"></div>
 
-<div class="card">
-<h3 style="margin-top:0;text-align:center">HAFTALIK YÖNETİCİ ÖZETİ</h3>
-<div class="summary">
-<div><b>Ziyaret</b><br><span id="ozZ">0</span></div>
-<div><b>Numune</b><br><span id="ozN">0</span></div>
-<div><b>Katalog</b><br><span id="ozK">0</span></div>
-<div><b>KM</b><br><span id="ozKM">0</span></div>
-</div>
+<div class="card" id="yoneticiOzet">
+<h3 style="text-align:center">YÖNETİCİ ÖZET RAPORU</h3>
+<table>
+<tr><th>Personel</th><th>Bölge</th><th>Hafta</th><th>Plaka</th><th>Toplam Ziyaret</th><th>Numune</th><th>Katalog</th><th>KM</th></tr>
+<tr>
+<td id="pO"></td><td id="bO"></td><td id="tO"></td><td id="plO"></td>
+<td id="ozZ"></td><td id="ozN"></td><td id="ozK"></td><td id="ozKM"></td>
+</tr>
+</table>
 </div>
 
 <div class="actions">
@@ -76,41 +81,25 @@ const gunler=['Pazartesi','Salı','Çarşamba','Perşembe','Cuma'];
 const ziyaretAdet=15;
 
 const pSel=document.getElementById('personel');
-const bolge=document.getElementById('bolge');
-const tarih=document.getElementById('tarih');
-const plaka=document.getElementById('plaka');
-const kmBas=document.getElementById('kmBas');
-const kmBit=document.getElementById('kmBit');
-const ozZ=document.getElementById('ozZ');
-const ozN=document.getElementById('ozN');
-const ozK=document.getElementById('ozK');
-const ozKM=document.getElementById('ozKM');
-
 pSel.innerHTML=personeller.map(p=>'<option>'+p+'</option>').join('');
 
 const tabs=document.getElementById('tabs');
 const days=document.getElementById('days');
 
-gunler.forEach(function(g,di){
- tabs.innerHTML+='<button onclick="openDay('+di+')" '+(di===0?'class="active"':'')+'>'+g.substring(0,3).toUpperCase()+'</button>';
- let h='<div class="day" style="display:'+(di===0?'block':'none')+'"><div class="card"><h3>'+g+'</h3>';
+gunler.forEach((g,di)=>{
+ tabs.innerHTML+='<button onclick="openDay('+di+')" '+(di===0?'class=active':'')+'>'+g.substring(0,3).toUpperCase()+'</button>';
+ let h='<div class="day" style="display:'+(di===0?'block':'none')+'"><div class="card"><h3>'+g+'</h3><table><tr><th>#</th><th>Saat</th><th>Firma</th><th>Amaç</th><th>N</th><th>K</th></tr>';
  for(let i=1;i<=ziyaretAdet;i++){
-  h+='<div class="visit">'+
-     '<b>'+i+'. Ziyaret</b>'+
-     '<input type="time" data-k="d'+di+'v'+i+'_time">'+
-     '<input placeholder="Firma / Cari" data-k="d'+di+'v'+i+'_firma">'+
-     '<select data-k="d'+di+'v'+i+'_amac">'+
-      '<option value="">Amaç</option>'+
-      '<option>Tanışma</option>'+
-      '<option>Tekrar Ziyaret</option>'+
-      '<option>İade</option>'+
-      '<option>Ürün Tanıtımı</option>'+
-     '</select>'+
-     '<label><input type="checkbox" data-k="d'+di+'v'+i+'_numune"> Numune</label>'+
-     '<label><input type="checkbox" data-k="d'+di+'v'+i+'_katalog"> Katalog</label>'+
-     '</div>';
+  h+='<tr class="vrow" data-di="'+di+'" data-i="'+i+'">'
+    +'<td>'+i+'</td>'
+    +'<td><input type="time" data-k="d'+di+'v'+i+'_time"></td>'
+    +'<td><input data-k="d'+di+'v'+i+'_firma"></td>'
+    +'<td><select data-k="d'+di+'v'+i+'_amac"><option></option><option>Tanışma</option><option>Tekrar</option><option>İade</option><option>Tanıtım</option></select></td>'
+    +'<td><input type="checkbox" data-k="d'+di+'v'+i+'_numune"></td>'
+    +'<td><input type="checkbox" data-k="d'+di+'v'+i+'_katalog"></td>'
+    +'</tr>';
  }
- h+='</div></div>';
+ h+='</table></div></div>';
  days.innerHTML+=h;
 });
 
@@ -120,29 +109,33 @@ function openDay(i){
 }
 
 function saveData(){
- const data={meta:{personel:pSel.value,bolge:bolge.value,tarih:tarih.value,plaka:plaka.value,kmBas:kmBas.value,kmBit:kmBit.value},v:{}};
- document.querySelectorAll('[data-k]').forEach(e=>data.v[e.dataset.k]=e.type==='checkbox'?e.checked:e.value);
- localStorage.setItem(KEY,JSON.stringify(data));
- calcSummary(data);
-}
-
-function loadData(){
- const d=JSON.parse(localStorage.getItem(KEY)); if(!d) return;
- Object.keys(d.meta).forEach(k=>document.getElementById(k).value=d.meta[k]);
- document.querySelectorAll('[data-k]').forEach(e=>{if(d.v[e.dataset.k]!=null){e.type==='checkbox'?e.checked=d.v[e.dataset.k]:e.value=d.v[e.dataset.k];}});
+ const d={meta:{personel:pSel.value,bolge:bolge.value,tarih:tarih.value,plaka:plaka.value,kmBas:kmBas.value,kmBit:kmBit.value},v:{}};
+ document.querySelectorAll('[data-k]').forEach(e=>d.v[e.dataset.k]=e.type==='checkbox'?e.checked:e.value);
+ localStorage.setItem(KEY,JSON.stringify(d));
  calcSummary(d);
 }
 
 function calcSummary(d){
  let z=0,n=0,k=0;
- Object.keys(d.v).forEach(x=>{if(x.endsWith('firma')&&d.v[x])z++;if(x.endsWith('numune')&&d.v[x])n++;if(x.endsWith('katalog')&&d.v[x])k++;});
- ozZ.innerText=z;ozN.innerText=n;ozK.innerText=k;ozKM.innerText=(d.meta.kmBit-d.meta.kmBas)||0;
+ Object.keys(d.v).forEach(x=>{
+  if(x.endsWith('firma')&&d.v[x]) z++;
+  if(x.endsWith('numune')&&d.v[x]) n++;
+  if(x.endsWith('katalog')&&d.v[x]) k++;
+ });
+ ozZ.innerText=z; ozN.innerText=n; ozK.innerText=k;
+ ozKM.innerText=(d.meta.kmBit-d.meta.kmBas)||0;
+ pO.innerText=d.meta.personel; bO.innerText=d.meta.bolge; tO.innerText=d.meta.tarih; plO.innerText=d.meta.plaka;
 }
 
-function exportPDF(){saveData();window.print();}
-function newWeek(){if(confirm('Tüm veriler silinecek. Emin misiniz?')){localStorage.removeItem(KEY);location.reload();}}
+function exportPDF(){ saveData(); window.print(); }
+function newWeek(){ if(confirm('Silinsin mi?')){localStorage.removeItem(KEY);location.reload();} }
 
-loadData();
+(function load(){ const d=JSON.parse(localStorage.getItem(KEY)); if(!d) return;
+ Object.keys(d.meta).forEach(k=>document.getElementById(k).value=d.meta[k]);
+ document.querySelectorAll('[data-k]').forEach(e=>{ if(d.v[e.dataset.k]!=null){e.type==='checkbox'?e.checked=d.v[e.dataset.k]:e.value=d.v[e.dataset.k];}});
+ calcSummary(d);
+})();
 </script>
 </body>
 </html>
+
