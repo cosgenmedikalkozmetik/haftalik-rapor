@@ -130,6 +130,7 @@ function calcSummary(d){
 
 function exportPDF(){
  const d=JSON.parse(localStorage.getItem(KEY)); if(!d){alert('Kayıt yok');return;}
+ calcSummary(d);
  let h=`<h1>HAFTALIK ZİYARET RAPORU</h1><p><b>${d.meta.personel}</b> | ${d.meta.bolge} | ${d.meta.tarih}</p>`;
  h+=`<table border=1 width=100% cellpadding=6><tr><th>Ziyaret</th><th>Numune</th><th>Katalog</th><th>KM</th></tr><tr><td>${ozZ.innerText}</td><td>${ozN.innerText}</td><td>${ozK.innerText}</td><td>${ozKM.innerText}</td></tr></table><br>`;
  gunler.forEach((g,di)=>{
